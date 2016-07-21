@@ -11,6 +11,8 @@ import android.view.MenuItem;
 
 public class MainActivity extends AppCompatActivity {
 
+    String popularMovieQuery = "https://api.themoviedb.org/3/movie/popular?api_key=d0a65dc4886d87d6de1287f0dc4b927c";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
