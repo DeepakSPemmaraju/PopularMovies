@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
@@ -23,13 +24,13 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Created by deepakpe on 7/31/2016.
  */
 public class MainActivityFragment extends Fragment {
     private QueryResult queryResult;
-
     public MainActivityFragment() {
     }
 
@@ -38,22 +39,27 @@ public class MainActivityFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
         FetchMoviesTask moviesTaskTask = new FetchMoviesTask();
-        moviesTaskTask.execute();
-        GridView gridview = (GridView) getView().findViewById(R.id.gridview);
-        gridview.setAdapter(new MovieAdapter(getActivity()));
+        moviesTaskTask.execute(rootView);
+        try {
+            queryResult =  moviesTaskTask.get();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+        Movie[] movies = queryResult.getResults();
+        MovieAdapter movieAdapter = new MovieAdapter(getActivity(), Arrays.asList(movies));
+        GridView gridView = (GridView)rootView.findViewById(R.id.gridview);
+        gridView.setAdapter(movieAdapter);
+
         return rootView;
     }
 
-    private class FetchMoviesTask extends AsyncTask<Void, Void, QueryResult> {
+    private class FetchMoviesTask extends AsyncTask<View, Void, QueryResult> {
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
 
         @Override
-        protected void onPostExecute(QueryResult result) {
-            queryResult = result;
-        }
-
-        @Override
-        protected QueryResult doInBackground(Void... voids) {
+        protected QueryResult doInBackground(View... views) {
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
 
@@ -92,8 +98,8 @@ public class MainActivityFragment extends Fragment {
 
                     popularMoviesStr = buffer.toString();
                     Gson gson = new Gson();
-                    QueryResult queryResult = gson.fromJson(popularMoviesStr, QueryResult.class);
-                    System.out.print(queryResult);
+                    queryResult = gson.fromJson(popularMoviesStr, QueryResult.class);
+                    return queryResult;
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -111,49 +117,6 @@ public class MainActivityFragment extends Fragment {
                 }
             }
             return null;
-        }
-    }
-
-    public class MovieAdapter extends BaseAdapter {
-        private Context mContext;
-
-        // Gets the context so it can be used later
-        public MovieAdapter(Context c) {
-            mContext = c;
-        }
-
-        // Total number of things contained within the adapter
-        public int getCount() {
-            return queryResult.getResults().length;
-        }
-
-        // Require for structure, not really used in my code.
-        public Object getItem(int position) {
-            return null;
-        }
-
-        // Require for structure, not really used in my code. Can
-        // be used to get the id of an item in the adapter for
-        // manual control.
-        public long getItemId(int position) {
-            return position;
-        }
-
-        public View getView(int position,
-                            View convertView, ViewGroup parent) {
-            ImageView imageView;
-            if (convertView == null) {
-                // if it's not recycled, initialize some attributes
-                imageView = new ImageView(mContext);
-                imageView.setLayoutParams(new GridView.LayoutParams(85, 85));
-                imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                imageView.setPadding(8, 8, 8, 8);
-            } else {
-                imageView = (ImageView) convertView;
-            }
-
-            Picasso.with(mContext).load("http://i.imgur.com/DvpvklR.png").into(imageView);
-            return imageView;
         }
     }
 }
